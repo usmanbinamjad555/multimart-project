@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    
+  backend:
+    build: ./backend
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    # Note: If your backend fails to connect to DB, you may need to change 'localhost' 
+    # to 'mongodb' in your backend's mongoose connection string!
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
