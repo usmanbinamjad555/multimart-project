@@ -2,20 +2,26 @@ version: '3.8'
 services:
   mongodb:
     image: mongo:latest
+    container_name: mongodb-server # Explicit name for internal resolution
     ports:
       - "27017:27017"
 
   backend:
     build: ./backend
+    container_name: backend-api
     ports:
       - "8081:8081"
     depends_on:
       - mongodb
+    links:
+      - mongodb:mongodb-server # Direct mapping to bypass DNS delays
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/multimart
+      - MONGO_URI=mongodb://mongodb-server:27017/multimart
+      - NODE_ENV=development
 
   frontend:
     build: ./frontend
+    container_name: frontend-app
     ports:
       - "5173:5173"
     depends_on:
