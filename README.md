@@ -38,7 +38,7 @@ MongoDB Database: "multimart"
 | Cost | ✅ Very cheap | ✅ Cheap | ❌ Expensive |
 | Backup per tenant | ❌ Hard | ✅ Easy | ✅ Easy |
 | Scale | ❌ Limited | ✅ Moderate | ✅ Best |
-
+ 
 ### How It Works in Code
 
 Each tenant gets a unique `schemaPrefix` (e.g., `techzone_abc123`).  
