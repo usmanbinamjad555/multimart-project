@@ -2,20 +2,22 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout & Deploy') {
+       stage('Checkout & Deploy') {
             steps {
                 checkout scm
                 
-                echo 'Starting MERN Application via Docker Compose...'
-                sh 'docker compose down' 
-                sh 'docker compose up -d --build'
+                echo 'Starting MERN Application...'
+                // The '-p multimart' flag ensures both workspaces target the same project name
+                sh 'docker compose -p multimart down' 
+                sh 'docker compose -p multimart up -d --build'
                 
-                echo 'Waiting 90s for MongoDB and Backend to handshake...'
+                echo 'Waiting 90s for services to stabilize...'
                 sleep time: 90, unit: 'SECONDS'
                 
-                echo 'Seeding Database with test data...'
-                // Using a subshell to find the backend container ID dynamically
-                sh 'docker exec $(docker ps -q -f name=backend) npm run seed'
+                echo 'Seeding Database...'
+                // Updated to target the consistent container name
+                sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()"' // Optional: Clear old data
+                sh 'docker exec backend-api npm run seed'
             }
         }
 
