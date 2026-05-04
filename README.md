@@ -14,7 +14,7 @@ MongoDB Database: "multimart"
 │
 ├── 🌐 SHARED COLLECTIONS (Global) 
 │   ├── users           → All users (superadmin, tenant_admins, customers)
-│   └── tenants         → All store registrations & metadata
+│   └── tenants         → All store registrations & metadata 
 │
 └── 🏪 PER-TENANT COLLECTIONS (Isolated) 
     ├── techzone_abc123_products
