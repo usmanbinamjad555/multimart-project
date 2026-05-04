@@ -16,7 +16,7 @@ MongoDB Database: "multimart"
 │   ├── users           → All users (superadmin, tenant_admins, customers)
 │   └── tenants         → All store registrations & metadata
 │
-└── 🏪 PER-TENANT COLLECTIONS (Isolated)
+└── 🏪 PER-TENANT COLLECTIONS (Isolated) 
     ├── techzone_abc123_products
     ├── techzone_abc123_orders
     ├── techzone_abc123_categories
