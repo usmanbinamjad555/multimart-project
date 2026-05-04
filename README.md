@@ -12,7 +12,7 @@
 ```
 MongoDB Database: "multimart"
 │
-├── 🌐 SHARED COLLECTIONS (Global)
+├── 🌐 SHARED COLLECTIONS (Global) 
 │   ├── users           → All users (superadmin, tenant_admins, customers)
 │   └── tenants         → All store registrations & metadata
 │
