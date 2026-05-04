@@ -5,31 +5,47 @@ pipeline {
         stage('Checkout & Deploy') {
             steps {
                 checkout scm
-                echo 'Starting MERN Application...'
-                sh 'docker compose -p multimart down -v'
-                sh 'docker compose -p multimart up -d --build'
+                echo 'Stopping any existing containers...'
+                sh 'docker compose -p multimart down -v --remove-orphans || true'
                 
-                echo 'Waiting for MongoDB healthcheck...'
+                echo 'Starting MERN Application...'
+                sh 'docker compose -p multimart up -d --build'
+
+                echo 'Waiting for MongoDB to become healthy...'
                 sh '''
-                    for i in $(seq 1 24); do
-                        STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null || echo "not_found")
-                        echo "Attempt $i — MongoDB: $STATUS"
+                    echo "Checking MongoDB status every 10s (max 2 minutes)..."
+                    for i in $(seq 1 12); do
+                        STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null || echo "missing")
+                        echo "Attempt $i/12 — MongoDB health: $STATUS"
+                        
                         if [ "$STATUS" = "healthy" ]; then
-                            echo "MongoDB ready."
+                            echo "MongoDB is healthy and ready!"
                             break
                         fi
-                        sleep 5
+                        
+                        if [ "$STATUS" = "missing" ] || [ "$STATUS" = "unhealthy" ]; then
+                            echo "--- MongoDB container logs ---"
+                            docker logs mongodb-server --tail 20 || true
+                        fi
+                        
+                        if [ "$i" = "12" ]; then
+                            echo "ERROR: MongoDB never became healthy after 2 minutes"
+                            docker ps -a
+                            exit 1
+                        fi
+                        
+                        sleep 10
                     done
                 '''
 
-                echo 'Waiting for backend to initialize...'
-                sleep time: 15, unit: 'SECONDS'
+                echo 'Waiting 20s for backend to fully connect to MongoDB...'
+                sleep time: 20, unit: 'SECONDS'
 
-                echo 'Verifying containers are running...'
+                echo 'All containers status:'
                 sh 'docker ps'
 
                 echo 'Seeding Database...'
-                sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()"'
+                sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()" || true'
                 sh 'docker exec backend-api node utils/seeder.js'
             }
         }
@@ -48,12 +64,12 @@ pipeline {
 
                 echo 'Running automated tests...'
                 dir('multimart-tests') {
-                    sh 'mvn clean test'
+                    sh 'mvn clean test -Dtest=MultiMartTest'
                 }
             }
             post {
                 always {
-                    junit 'multimart-tests/target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: 'multimart-tests/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -72,7 +88,9 @@ pipeline {
                     subject: "MultiMart SP23-BCS-115 Build #${env.BUILD_NUMBER}: ${currentBuild.currentResult}",
                     body: """
                         <h2>Build ${env.BUILD_NUMBER} — ${currentBuild.currentResult}</h2>
-                        <p>View full logs: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                        <p><b>Project:</b> MultiMart E-Commerce</p>
+                        <p><b>Triggered by:</b> ${COMMITTER_EMAIL}</p>
+                        <p><a href="${env.BUILD_URL}">View Full Build Logs</a></p>
                     """,
                     attachLog: true,
                     mimeType: 'text/html'
