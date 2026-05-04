@@ -3,52 +3,44 @@ pipeline {
 
     stages {
         stage('Checkout & Deploy') {
-            steps {
-                checkout scm
-                echo 'Stopping any existing containers...'
-                sh 'docker compose -p multimart down -v --remove-orphans || true'
-                
-                echo 'Starting MERN Application...'
-                sh 'docker compose -p multimart up -d --build'
+    steps {
+        checkout scm
+        echo 'Stopping existing containers...'
+        sh 'docker compose -p multimart down -v --remove-orphans || true'
 
-                echo 'Waiting for MongoDB to become healthy...'
-                sh '''
-                    echo "Checking MongoDB status every 10s (max 2 minutes)..."
-                    for i in $(seq 1 12); do
-                        STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null || echo "missing")
-                        echo "Attempt $i/12 — MongoDB health: $STATUS"
-                        
-                        if [ "$STATUS" = "healthy" ]; then
-                            echo "MongoDB is healthy and ready!"
-                            break
-                        fi
-                        
-                        if [ "$STATUS" = "missing" ] || [ "$STATUS" = "unhealthy" ]; then
-                            echo "--- MongoDB container logs ---"
-                            docker logs mongodb-server --tail 20 || true
-                        fi
-                        
-                        if [ "$i" = "12" ]; then
-                            echo "ERROR: MongoDB never became healthy after 2 minutes"
-                            docker ps -a
-                            exit 1
-                        fi
-                        
-                        sleep 10
-                    done
-                '''
+        echo 'Starting MERN Application...'
+        sh 'docker compose -p multimart up -d --build'
 
-                echo 'Waiting 20s for backend to fully connect to MongoDB...'
-                sleep time: 20, unit: 'SECONDS'
+        echo 'Waiting for MongoDB to become healthy...'
+        sh '''
+            for i in $(seq 1 18); do
+                STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null)
+                echo "Attempt $i/18 — MongoDB health: [$STATUS]"
+                if [ "$STATUS" = "healthy" ]; then
+                    echo "MongoDB is ready!"
+                    break
+                fi
+                if [ $i -eq 18 ]; then
+                    echo "Timed out. Printing logs:"
+                    docker logs mongodb-server --tail 30
+                    docker ps -a
+                    exit 1
+                fi
+                sleep 10
+            done
+        '''
 
-                echo 'All containers status:'
-                sh 'docker ps'
+        echo 'Waiting 15s for backend to connect...'
+        sleep time: 15, unit: 'SECONDS'
 
-                echo 'Seeding Database...'
-                sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()" || true'
-                sh 'docker exec backend-api node utils/seeder.js'
-            }
-        }
+        echo 'Container status:'
+        sh 'docker ps'
+
+        echo 'Seeding Database...'
+        sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()" || true'
+        sh 'docker exec backend-api node utils/seeder.js'
+    }
+}
 
         stage('Execute Selenium Tests') {
             agent {
