@@ -1,10 +1,18 @@
-version: '3.8'
 services:
   mongodb:
-    image: mongo:latest
-    container_name: mongodb-server # Explicit name for internal resolution
+    image: mongo:6.0
+    container_name: mongodb-server
     ports:
-      - "27017:27017"
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   backend:
     build: ./backend
@@ -12,12 +20,17 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - mongodb
-    links:
-      - mongodb:mongodb-server # Direct mapping to bypass DNS delays
+      mongodb:
+        condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb-server:27017/multimart
       - NODE_ENV=development
+      - PORT=8081
+      - JWT_SECRET=multimart_super_secret_jwt_key_2024
+      - JWT_EXPIRE=30d
+      - SUPER_ADMIN_EMAIL=admin@multimart.com
+      - SUPER_ADMIN_PASSWORD=Admin@12345
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -26,3 +39,7 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
