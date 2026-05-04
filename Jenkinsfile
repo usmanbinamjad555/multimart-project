@@ -13,7 +13,7 @@ pipeline {
                 sh 'docker compose up -d --build'
                 
                 // Wait for services to be ready
-                sleep time: 20, unit: 'SECONDS'
+                sleep time: 60, unit: 'SECONDS'
             }
         }
 
