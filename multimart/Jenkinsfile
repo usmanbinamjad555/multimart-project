@@ -2,6 +2,13 @@ pipeline {
     agent any // We run the first steps on the EC2 server itself
     
     stages {
+        // CHANGE 1: Explicitly checkout the Application code first
+        stage('Checkout Application Code') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Bring Deployment Up') {
             steps {
                 echo 'Starting MERN Application via Docker Compose...'
@@ -18,9 +25,9 @@ pipeline {
         stage('Clone Test Code') {
             steps {
                 echo 'Downloading Selenium Test Cases...'
-                // REPLACE YOUR_GITHUB_USERNAME below!
                 sh 'rm -rf multimart-tests'
-                sh 'git clone https://github.com/usmanbinamjad555/multimart-tests'
+                // CHANGE 2: Added .git to the end of the URL
+                sh 'git clone https://github.com/usmanbinamjad555/multimart-tests.git'
             }
         }
         
@@ -36,6 +43,12 @@ pipeline {
                 echo 'Running automated tests...'
                 dir('multimart-tests') {
                     sh 'mvn clean test'
+                }
+            }
+            // CHANGE 3: Generate visual test reports for your assignment screenshots!
+            post {
+                always {
+                    junit 'multimart-tests/target/surefire-reports/*.xml'
                 }
             }
         }
