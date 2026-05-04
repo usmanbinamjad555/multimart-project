@@ -4,19 +4,22 @@ pipeline {
     stages {
         stage('Checkout & Deploy') {
             steps {
-                // Pulls the Application code (containing docker-compose.yml)
                 checkout scm
                 
                 echo 'Starting MERN Application via Docker Compose...'
-                // Stops old versions and builds the new ones
-                sh 'docker compose down'
+                // Remove -v if you have it here, to keep things stable
+                sh 'docker compose down' 
                 sh 'docker compose up -d --build'
                 
-                // Wait for services to be ready
+                echo 'Waiting for services to stabilize...'
                 sleep time: 60, unit: 'SECONDS'
+                
+                // NEW STEP: This is the command that worked in your terminal
+                echo 'Seeding Database with test data...'
+                sh 'docker exec multimart-test-pipeline-backend-1 npm run seed'
             }
         }
-
+        
         stage('Execute Selenium Tests') {
             agent {
                 docker {
