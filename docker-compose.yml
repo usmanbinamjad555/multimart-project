@@ -4,17 +4,15 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
-    
- backend:
+
+  backend:
     build: ./backend
     ports:
       - "8081:8081"
     depends_on:
       - mongodb
     environment:
-      MONGO_URI: mongodb://mongodb:27017/multimart
-      PORT: 8081
-      NODE_ENV: development
+      - MONGO_URI=mongodb://mongodb:27017/multimart
 
   frontend:
     build: ./frontend
