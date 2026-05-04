@@ -1,63 +1,56 @@
 pipeline {
-    agent any // We run the first steps on the EC2 server itself
-    
-    stages {
-        // CHANGE 1: Explicitly checkout the Application code first
-        stage('Checkout Application Code') {
-            steps {
-                checkout scm
-            }
-        }
+    agent any // Initial steps run on the EC2 base environment
 
-        stage('Bring Deployment Up') {
+    stages {
+        stage('Checkout & Deploy') {
             steps {
+                // Pulls the Application code (containing docker-compose.yml)
+                checkout scm
+                
                 echo 'Starting MERN Application via Docker Compose...'
-                // Stops any old versions running
+                // Stops old versions and builds the new ones
                 sh 'docker compose down'
-                // Starts the DB, Backend, and Frontend in the background
                 sh 'docker compose up -d --build'
                 
-                // Wait for React and Node to fully boot up
+                // Wait for services to be ready
                 sleep time: 20, unit: 'SECONDS'
             }
         }
-        
-        stage('Clone Test Code') {
-            steps {
-                echo 'Downloading Selenium Test Cases...'
-                sh 'rm -rf multimart-tests'
-                // CHANGE 2: Added .git to the end of the URL
-                sh 'git clone https://github.com/usmanbinamjad555/multimart-tests.git'
-            }
-        }
-        
+
         stage('Execute Selenium Tests') {
             agent {
                 docker {
                     image 'markhobson/maven-chrome:jdk-17'
-                    // --network host allows the container to see localhost:5173 
-                    args '-u root -v /var/run/docker.sock:/var/run/docker.sock --shm-size=2g --network host'
+                    // Fix: Added --entrypoint="" to allow Jenkins to run commands inside the container
+                    // Fix: Maintained --network host so the container sees localhost:5173
+                    args '-u root --entrypoint="" -v /var/run/docker.sock:/var/run/docker.sock --shm-size=2g --network host'
                 }
             }
             steps {
+                // Fix: Cloning INSIDE this stage ensures the test code is in the correct container workspace
+                echo 'Downloading Selenium Test Cases...'
+                sh 'rm -rf multimart-tests'
+                sh 'git clone https://github.com/usmanbinamjad555/multimart-tests.git'
+                
                 echo 'Running automated tests...'
                 dir('multimart-tests') {
+                    // Maven will now find the pom.xml in this directory
                     sh 'mvn clean test'
                 }
             }
-            // CHANGE 3: Generate visual test reports for your assignment screenshots!
             post {
                 always {
+                    // Publishes the test results to the Jenkins Dashboard
                     junit 'multimart-tests/target/surefire-reports/*.xml'
                 }
             }
         }
     }
-    
+
     post {
         always {
             script {
-                // Extracts the email of the person who pushed the current commit
+                // Extracts the email of the person who pushed the commit
                 def COMMITTER_EMAIL = sh(script: "git --no-pager show -s --format='%ae' HEAD", returnStdout: true).trim()
                 
                 echo "Sending test results to the committer: ${COMMITTER_EMAIL}"
@@ -68,7 +61,7 @@ pipeline {
                     body: """
                         <h2>Build Status: ${currentBuild.currentResult}</h2>
                         <p>Project: MultiMart Application Deployment & Testing</p>
-                        <p>Check the attached logs or view the Jenkins build here: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                        <p>View the Jenkins build logs here: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
                     """,
                     attachLog: true,
                     mimeType: 'text/html'
