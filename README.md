@@ -4,7 +4,7 @@
 > Inspired by Daraz, supporting multiple vendors/service providers under one platform.
 
 ---
-
+ 
 ## 🏗️ Multi-Tenancy Architecture
 
 ### Strategy: **Shared Database + Separate Schema (Collections)** 
