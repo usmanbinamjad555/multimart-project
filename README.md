@@ -7,7 +7,7 @@
 
 ## 🏗️ Multi-Tenancy Architecture
 
-### Strategy: **Shared Database + Separate Schema (Collections)**
+### Strategy: **Shared Database + Separate Schema (Collections)** 
  
 ``` 
 MongoDB Database: "multimart"
