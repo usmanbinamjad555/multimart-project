@@ -9,7 +9,8 @@ pipeline {
         sh 'docker compose -p multimart down -v --remove-orphans || true'
 
         echo 'Starting MERN Application...'
-        sh 'docker compose -p multimart up -d --build'
+        sh 'docker compose -p multimart build --no-cache'
+        sh 'docker compose -p multimart up -d'
 
         echo 'Waiting for MongoDB to become healthy...'
         sh '''
