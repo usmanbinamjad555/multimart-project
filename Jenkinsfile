@@ -3,45 +3,45 @@ pipeline {
 
     stages {
         stage('Checkout & Deploy') {
-    steps {
-        checkout scm
-        echo 'Stopping existing containers...'
-        sh 'docker compose -p multimart down -v --remove-orphans || true'
+            steps {
+                checkout scm
+                echo 'Stopping existing containers...'
+                sh 'docker compose -p multimart down -v --remove-orphans || true'
 
-        echo 'Starting MERN Application...'
-        sh 'docker compose -p multimart build --no-cache'
-        sh 'docker compose -p multimart up -d' 
+                echo 'Starting MERN Application...'
+                sh 'docker compose -p multimart build --no-cache'
+                sh 'docker compose -p multimart up -d' 
 
-        echo 'Waiting for MongoDB to become healthy...'
-        sh '''
-            for i in $(seq 1 18); do
-                STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null)
-                echo "Attempt $i/18 — MongoDB health: [$STATUS]"
-                if [ "$STATUS" = "healthy" ]; then
-                    echo "MongoDB is ready!"
-                    break
-                fi
-                if [ $i -eq 18 ]; then
-                    echo "Timed out. Printing logs:"
-                    docker logs mongodb-server --tail 30
-                    docker ps -a
-                    exit 1
-                fi
-                sleep 10
-            done
-        '''
+                echo 'Waiting for MongoDB to become healthy...'
+                sh '''
+                    for i in $(seq 1 18); do
+                        STATUS=$(docker inspect --format="{{.State.Health.Status}}" mongodb-server 2>/dev/null)
+                        echo "Attempt $i/18 — MongoDB health: [$STATUS]"
+                        if [ "$STATUS" = "healthy" ]; then
+                            echo "MongoDB is ready!"
+                            break
+                        fi
+                        if [ $i -eq 18 ]; then
+                            echo "Timed out. Printing logs:"
+                            docker logs mongodb-server --tail 30
+                            docker ps -a
+                            exit 1
+                        fi
+                        sleep 10
+                    done
+                '''
 
-        echo 'Waiting 15s for backend to connect...'
-        sleep time: 15, unit: 'SECONDS'
+                echo 'Waiting 15s for backend to connect...'
+                sleep time: 15, unit: 'SECONDS'
 
-        echo 'Container status:'
-        sh 'docker ps'
+                echo 'Container status:'
+                sh 'docker ps'
 
-        echo 'Seeding Database...'
-        sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()" || true'
-        sh 'docker exec backend-api node utils/seeder.js'
-    }
-}
+                echo 'Seeding Database...'
+                sh 'docker exec mongodb-server mongosh multimart --eval "db.dropDatabase()" || true'
+                sh 'docker exec backend-api node utils/seeder.js'
+            }
+        }
 
         stage('Execute Selenium Tests') {
             agent {
@@ -68,7 +68,7 @@ pipeline {
         }
     }
 
-   post {
+    post {
         always {
             script {
                 // Get the committer's email
@@ -88,10 +88,10 @@ pipeline {
                     "All 15 test cases executed successfully! The deployment is now live." : 
                     "The build failed during execution. Please check the attached logs."
 
-                echo "Sending results to: ${COMMITTER_EMAIL}"
+                echo "Sending fancy results ONLY to: ${COMMITTER_EMAIL}"
                 
                 emailext(
-                    to: "${COMMITTER_EMAIL}, qasimalik@gmail.com", // Emails you AND your professor
+                    to: "${COMMITTER_EMAIL}", // <--- STRICTLY ONLY THE PERSON WHO PUSHED
                     subject: "${statusIcon} MultiMart Build #${env.BUILD_NUMBER} [SP23-BCS-115]: ${currentBuild.currentResult}",
                     body: """
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -134,3 +134,4 @@ pipeline {
             }
         }
     }
+}
