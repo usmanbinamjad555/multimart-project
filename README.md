@@ -9,7 +9,7 @@
 
 ### Strategy: **Shared Database + Separate Schema (Collections)**
  
-```
+``` 
 MongoDB Database: "multimart"
 │
 ├── 🌐 SHARED COLLECTIONS (Global) 
