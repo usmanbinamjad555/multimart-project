@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    // Secrets are injected from Jenkins credentials (Secret text) and picked up by
+    // docker-compose.yml via ${VAR} substitution. Nothing sensitive is stored in this file.
+    environment {
+        JWT_SECRET           = credentials('multimart-jwt-secret')
+        SUPER_ADMIN_PASSWORD = credentials('multimart-super-admin-password')
+    }
+
     stages {
         stage('Checkout & Deploy') {
             steps {
@@ -77,8 +84,9 @@ pipeline {
                     returnStdout: true
                 ).trim()
 
-                // Define your EC2 Public IP (Update this if your IP changes)
-                def SERVER_IP = "3.26.148.149"
+                // Public host of the deployment server. Set EC2_HOST as a Jenkins
+                // environment variable (global or job level); defaults to localhost.
+                def SERVER_IP = env.EC2_HOST ?: "localhost"
                 def FRONTEND_URL = "http://${SERVER_IP}:5173"
 
                 // Create a fancy status message based on the build result
@@ -92,7 +100,7 @@ pipeline {
                 
                 emailext(
                     to: "${COMMITTER_EMAIL}", // <--- STRICTLY ONLY THE PERSON WHO PUSHED
-                    subject: "${statusIcon} MultiMart Build #${env.BUILD_NUMBER} [SP23-BCS-115]: ${currentBuild.currentResult}",
+                    subject: "${statusIcon} MultiMart Build #${env.BUILD_NUMBER}: ${currentBuild.currentResult}",
                     body: """
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                             <div style="background-color: ${statusColor}; color: white; padding: 20px; text-align: center;">
@@ -104,10 +112,6 @@ pipeline {
                                 <p style="font-size: 16px; font-weight: bold; color: #333;">${statusMessage}</p>
                                 
                                 <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                                    <tr>
-                                        <td style="padding: 10px; border-bottom: 1px solid #eee;"><b>Student ID:</b></td>
-                                        <td style="padding: 10px; border-bottom: 1px solid #eee;">SP23-BCS-115</td>
-                                    </tr>
                                     <tr>
                                         <td style="padding: 10px; border-bottom: 1px solid #eee;"><b>Triggered By:</b></td>
                                         <td style="padding: 10px; border-bottom: 1px solid #eee;">${COMMITTER_EMAIL} (GitHub Push)</td>

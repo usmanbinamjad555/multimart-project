@@ -44,7 +44,7 @@ export default function Login() {
         <div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Quick Login (Demo)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[['Super Admin','admin@multimart.com','Admin@12345'],['Store Admin','ali@techzone.pk','password123'],['Customer','ahmed@example.com','password123']].map(([r,e,p]) => (
+            {[['Store Admin','ali@techzone.pk','password123'],['Customer','ahmed@example.com','password123']].map(([r,e,p]) => (
               <button key={r} onClick={() => quickLogin(e,p)} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'white', fontSize: 13, textAlign: 'left', cursor: 'pointer', transition: 'var(--transition)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}>

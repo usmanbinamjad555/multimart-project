@@ -1,22 +1,24 @@
-# 🛒 MultiMart — Multi-Tenant E-Commerce Platform
+# MultiMart — Multi-Tenant E-Commerce Platform
 
 > A production-grade multi-tenant marketplace built with the MERN stack.  
 > Inspired by Daraz, supporting multiple vendors/service providers under one platform.
 
+End-to-end Selenium tests for this app live in [multimart-tests](https://github.com/usmanbinamjad555/multimart-tests).
+
 ---
  
-## 🏗️ Multi-Tenancy Architecture
+## Multi-Tenancy Architecture
 
 ### Strategy: **Shared Database + Separate Schema (Collections)** 
  
 ``` 
 MongoDB Database: "multimart"
 │
-├── 🌐 SHARED COLLECTIONS (Global) 
+├── SHARED COLLECTIONS (Global) 
 │   ├── users           → All users (superadmin, tenant_admins, customers) 
 │   └── tenants         → All store registrations & metadata 
 │
-└── 🏪 PER-TENANT COLLECTIONS (Isolated) 
+└── PER-TENANT COLLECTIONS (Isolated) 
     ├── techzone_abc123_products
     ├── techzone_abc123_orders
     ├── techzone_abc123_categories
@@ -31,13 +33,13 @@ MongoDB Database: "multimart"
 
 ### Why This Approach?
 
-| Feature | Shared DB + Shared Schema | **Shared DB + Separate Schema** ✅ | Separate DB |
+| Feature | Shared DB + Shared Schema | **Shared DB + Separate Schema** (chosen) | Separate DB |
 |---------|--------------------------|-------------------------------------|-------------|
-| Data Isolation | ❌ Risk of leaks | ✅ Full isolation | ✅ Full isolation |
-| Performance | ⚠️ Queries get slower | ✅ Per-tenant indexes | ✅ Best |
-| Cost | ✅ Very cheap | ✅ Cheap | ❌ Expensive |
-| Backup per tenant | ❌ Hard | ✅ Easy | ✅ Easy |
-| Scale | ❌ Limited | ✅ Moderate | ✅ Best |
+| Data Isolation | Risk of leaks | Full isolation | Full isolation |
+| Performance | Queries get slower | Per-tenant indexes | Best |
+| Cost | Very cheap | Cheap | Expensive |
+| Backup per tenant | Hard | Easy | Easy |
+| Scale | Limited | Moderate | Best |
  
 ### How It Works in Code
 
@@ -67,10 +69,13 @@ const products = await Product.find({ isActive: true }); // Only THIS tenant's p
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 multimart/
+├── docker-compose.yml               # MongoDB + backend + frontend containers
+├── Jenkinsfile                      # CI/CD: deploy with Docker Compose, then run Selenium tests
+├── .env.example                     # Variables for docker compose
 ├── backend/
 │   ├── config/
 │   │   └── db.js                    # MongoDB connection
@@ -80,7 +85,7 @@ multimart/
 │   ├── models/
 │   │   ├── User.js                  # Global user model (shared collection)
 │   │   ├── Tenant.js                # Global tenant model (shared collection)
-│   │   └── getTenantModels.js       # ⭐ Core isolation: per-tenant model factory
+│   │   └── getTenantModels.js       # Core isolation: per-tenant model factory
 │   ├── routes/
 │   │   ├── auth.js                  # Register, login, profile
 │   │   ├── admin.js                 # Super admin endpoints
@@ -88,7 +93,8 @@ multimart/
 │   │   ├── products.js              # Tenant-scoped products
 │   │   ├── orders.js                # Tenant-scoped orders
 │   │   ├── catalog.js               # Categories + reviews
-│   │   └── search.js                # Global cross-tenant search
+│   │   ├── search.js                # Global cross-tenant search
+│   │   └── upload.js                # Image upload
 │   ├── utils/
 │   │   └── seeder.js                # Seed demo data
 │   ├── server.js                    # Express app entry
@@ -138,7 +144,7 @@ multimart/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -149,7 +155,7 @@ multimart/
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your MongoDB URI
+# Edit .env: MONGO_URI, JWT_SECRET, SUPER_ADMIN_PASSWORD, ...
 npm run dev
 ```
 
@@ -168,13 +174,41 @@ npm run dev
 
 Open **http://localhost:5173**
 
+> Note: the Vite dev-server proxy in `frontend/vite.config.js` forwards `/api` to `http://backend-api:8081` (the Docker container name). For a fully local run, point it at `http://localhost:8081`.
+
+### Run with Docker Compose
+```bash
+cp .env.example .env
+# Set JWT_SECRET and SUPER_ADMIN_PASSWORD (compose refuses to start without them)
+docker compose up -d --build
+docker exec backend-api node utils/seeder.js
+```
+
+Services: MongoDB (`27017`), backend API (`8081`), frontend (`5173`).
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB connection string (required) |
+| `JWT_SECRET` | Secret used to sign JWTs (required, no default) |
+| `JWT_EXPIRE` | Token lifetime, e.g. `30d` |
+| `PORT` | Backend port (default `8081`) |
+| `CLIENT_URL` | Allowed CORS origin (default `http://localhost:5173`) |
+| `SUPER_ADMIN_EMAIL` | Super admin account created by the seeder |
+| `SUPER_ADMIN_PASSWORD` | Super admin password used by the seeder (required, no default) |
+
+The backend exits on startup if `MONGO_URI` or `JWT_SECRET` is missing.
+
 ---
 
-## 🔐 Demo Credentials
+## Demo Credentials (Local Seed Data Only)
+
+These accounts are created by `backend/utils/seeder.js` for **local development only**. Do not use them on a public deployment.
 
 | Role | Email | Password |
 |------|-------|----------|
-| **Super Admin** | admin@multimart.com | Admin@12345 |
+| **Super Admin** | value of `SUPER_ADMIN_EMAIL` (default admin@multimart.com) | value of `SUPER_ADMIN_PASSWORD` |
 | **TechZone Admin** | ali@techzone.pk | password123 |
 | **FashionHub Admin** | fatima@fashionhub.pk | password123 |
 | **SwiftServices Admin** | usman@swiftservices.pk | password123 |
@@ -182,7 +216,7 @@ Open **http://localhost:5173**
 
 ---
 
-## 🛣️ API Endpoints
+## API Endpoints
 
 ### Auth
 | Method | Endpoint | Access |
@@ -219,19 +253,19 @@ Open **http://localhost:5173**
 
 ---
 
-## 👥 User Roles
+## User Roles
 
-### 🔴 Super Admin
+### Super Admin
 - Approve / reject / suspend tenant stores
 - Manage all users
 - Platform-wide analytics dashboard
 
-### 🟠 Tenant Admin
+### Tenant Admin
 - Manage products, categories, orders
 - View store-specific analytics
 - Update store settings
 
-### 🔵 Customer
+### Customer
 - Browse stores and products
 - Global search across all stores
 - Shopping cart (multi-tenant)
@@ -240,7 +274,7 @@ Open **http://localhost:5173**
 
 ---
 
-## 🎨 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -256,10 +290,13 @@ Open **http://localhost:5173**
 | Password | bcryptjs |
 | Validation | express-validator |
 | Pagination | mongoose-paginate-v2 |
+| Uploads | multer |
+| DevOps | Docker Compose, Jenkins |
+| E2E Tests | Selenium + TestNG ([multimart-tests](https://github.com/usmanbinamjad555/multimart-tests)) |
 
 ---
 
-## 🔑 Key Multi-Tenant Concepts
+## Key Multi-Tenant Concepts
 
 ### Tenant Registration Flow
 ```
@@ -278,7 +315,7 @@ GET /api/stores/techzone/products
   → req.schemaPrefix = "techzone_abc123"
   → getTenantModels("techzone_abc123") → {Product, Order, ...}
   → Product.find() queries "techzone_abc123_products" collection
-  → ✅ Zero data leakage from other tenants
+  → Zero data leakage from other tenants
 ```
 
 ### Collection Isolation Proof
@@ -292,3 +329,25 @@ db.getCollectionNames().filter(n => n.includes('products'))
 ]
 // Each completely separate — no cross-tenant queries possible
 ```
+
+---
+
+## CI/CD
+
+The `Jenkinsfile` runs on every push:
+
+1. **Checkout & Deploy** — tears down the previous stack, rebuilds and starts it with `docker compose -p multimart`, waits for MongoDB to report healthy, then reseeds the database.
+2. **Execute Selenium Tests** — inside `markhobson/maven-chrome:jdk-17`, clones [multimart-tests](https://github.com/usmanbinamjad555/multimart-tests) and runs `mvn clean test -Dtest=MultiMartTest`; JUnit reports are published.
+3. **Post** — emails an HTML build summary with the console log to the committer.
+
+Required Jenkins configuration:
+
+| Name | Type | Purpose |
+|------|------|---------|
+| `multimart-jwt-secret` | Credential (Secret text) | Exported as `JWT_SECRET` |
+| `multimart-super-admin-password` | Credential (Secret text) | Exported as `SUPER_ADMIN_PASSWORD` |
+| `EC2_HOST` | Environment variable | Public host used for the deployment link in the email (defaults to `localhost`) |
+
+---
+
+Author: Muhammad Usman — [LinkedIn](https://www.linkedin.com/in/muhammad-usman-the-dev) · [Portfolio](https://portfolio-usman-46c4.vercel.app)

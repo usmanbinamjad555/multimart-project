@@ -36,10 +36,14 @@ const seed = async () => {
     // ─── Super Admin ─────────────────────────────────────────
     let superAdmin = await User.findOne({ role: 'superadmin' });
     if (!superAdmin) {
+      // The super-admin password must come from the environment (no hardcoded fallback).
+      if (!process.env.SUPER_ADMIN_PASSWORD) {
+        throw new Error('SUPER_ADMIN_PASSWORD is not set. Add it to backend/.env (see backend/.env.example).');
+      }
       superAdmin = await User.create({
         firstName: 'Super', lastName: 'Admin',
         email: process.env.SUPER_ADMIN_EMAIL || 'admin@multimart.com',
-        password: process.env.SUPER_ADMIN_PASSWORD || 'Admin@12345',
+        password: process.env.SUPER_ADMIN_PASSWORD,
         role: 'superadmin',
       });
       console.log(`✅ Super Admin: ${superAdmin.email}`);
@@ -263,7 +267,7 @@ const seed = async () => {
 
     console.log('\n🎉 Seed complete!\n');
     console.log('─────────────────────────────────────────────────');
-    console.log('📧 Super Admin:        admin@multimart.com   / Admin@12345');
+    console.log(`📧 Super Admin:        ${process.env.SUPER_ADMIN_EMAIL || 'admin@multimart.com'} / (SUPER_ADMIN_PASSWORD from env)`);
     console.log('📧 TechZone Admin:     ali@techzone.pk       / password123');
     console.log('📧 FashionHub Admin:   fatima@fashionhub.pk  / password123');
     console.log('📧 SwiftServices:      usman@swiftservices.pk / password123');
