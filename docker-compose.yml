@@ -3,7 +3,8 @@ services:
     image: mongo:6.0
     container_name: mongodb-server
     ports:
-      - "27017:27017"
+      # Bound to localhost only: MongoDB runs without auth, so it must not be reachable publicly
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
@@ -26,10 +27,11 @@ services:
       - MONGO_URI=mongodb://mongodb-server:27017/multimart
       - NODE_ENV=development
       - PORT=8081
-      - JWT_SECRET=multimart_super_secret_jwt_key_2024
-      - JWT_EXPIRE=30d
-      - SUPER_ADMIN_EMAIL=admin@multimart.com
-      - SUPER_ADMIN_PASSWORD=Admin@12345
+      # Secrets come from the shell environment or a root .env file (see .env.example)
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_EXPIRE=${JWT_EXPIRE:-30d}
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@multimart.com}
+      - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:?SUPER_ADMIN_PASSWORD is required}
     restart: unless-stopped
 
   frontend:

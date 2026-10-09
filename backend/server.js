@@ -5,6 +5,14 @@ const path = require('path');
 
 dotenv.config();
 
+// Fail fast if required configuration is missing (no hardcoded fallbacks for secrets)
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missingEnv.length) {
+  console.error(`Missing required environment variable(s): ${missingEnv.join(', ')}. See backend/.env.example.`);
+  process.exit(1);
+}
+
 const connectDB = require('./config/db');
 const authRoutes    = require('./routes/auth');
 const adminRoutes   = require('./routes/admin');
